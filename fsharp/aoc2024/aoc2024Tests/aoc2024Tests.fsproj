@@ -13,6 +13,7 @@
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
         <Content Include="SampleData\day2_1.txt" />
+        <Content Include="SampleData\day3_1.txt" />
     </ItemGroup>
 
     <ItemGroup>

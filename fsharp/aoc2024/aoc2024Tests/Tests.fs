@@ -174,3 +174,69 @@ module Day2 =
 
         let result = reports |> List.filter isSafe |> List.length
         test <@ result = 561 @>
+
+module Day3 =
+
+    let calcInstructions instructions =
+        instructions
+        |> Seq.map (fun i ->
+            let entry = i |> string
+            let regex2 = "(\d+),(\d+)"
+            let g = Regex.Match(entry, regex2).Groups
+            let a = g[1].Value |> int
+            let b = g[2].Value |> int
+            (a * b))
+        |> Seq.sum
+
+    let regexMul = "mul\((\d{1,3})\,(\d{1,3})\)"
+
+    [<Fact>]
+    let ``Part 1 - sample`` () =
+        let input =
+            "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))"
+
+        let result = Regex.Matches(input, regexMul) |> calcInstructions
+
+        test <@ result = 161 @>
+
+    [<Fact>]
+    let ``Part 1`` () =
+        let input = readSample "day3_1.txt" |> String.concat ""
+        let result = Regex.Matches(input, regexMul) |> calcInstructions
+
+        test <@ result = 173785482 @>
+
+    let getEnabled (input: string) =
+        input.Split("do()")
+        |> List.ofArray
+        |> List.filter (fun el -> el <> "")
+        |> List.map (fun el ->
+            if el.Contains("don't()") then
+                el.Substring(0, el.IndexOf("don't()"))
+            else
+                el)
+        |> String.concat ""
+
+    [<Fact>]
+    let ``Part 2 - sample`` () =
+        let inputRaw =
+            "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))"
+
+        let input = "do()" + inputRaw
+
+        let enabled = getEnabled input
+
+        let result = Regex.Matches(enabled, regexMul) |> calcInstructions
+
+        test <@ result = 48 @>
+
+    [<Fact>]
+    let ``Part 2`` () =
+        let inputRaw = readSample "day3_1.txt" |> String.concat ""
+        let input = "do()" + inputRaw
+
+        let enabled = getEnabled input
+
+        let result = Regex.Matches(enabled, regexMul) |> calcInstructions
+
+        test <@ result = 83158140 @>
