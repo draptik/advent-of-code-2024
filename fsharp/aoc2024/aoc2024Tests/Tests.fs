@@ -250,6 +250,10 @@ module Day4 =
         cs |> List.iter (sb.Append >> ignore)
         sb.ToString()
 
+    // Idea:
+    // - rows and columns can be searched with regex.
+    // - Diagonals are treated differently.
+    //      -> I'll use Array2D and some matrix stuff.
     [<Fact>]
     let ``Part 1 - sample`` () =
         let sampleInput =
@@ -266,6 +270,22 @@ module Day4 =
                 "MXMXAXMASX"
             ]
         
+        let transposeMatrix (matrix: char array2d) =
+            let length = Array2D.length1 matrix
+            let transposed = Array2D.create length length '.'
+            for x in [0..(length-1)] do
+                for y in [0..(length-1)] do
+                    transposed[y, x] <- matrix[x, y]
+            transposed
+            
+        let matrix2Lists (matrix: char array2d) =
+            let mutable result = []
+            let length = (Array2D.length1 matrix) - 1
+            for r in [0..length] do
+                let s = matrix[r, *] |> string
+                result <- s :: result
+            result |> List.rev
+            
         let getAllDiagonals (input: string list) =
             
             let inputMatrix = array2D input
@@ -286,23 +306,38 @@ module Day4 =
                     let diagonal = originalMatrix[0..reversedIndex, i..length] |> getMainDiagonal
                     allDiagonals <- diagonal :: allDiagonals
                 allDiagonals
-                
-            let transposeMatrix (matrix: char array2d) =
-                let length = Array2D.length1 matrix
-                let transposed = Array2D.create length length '.'
-                for x in [0..(length-1)] do
-                    for y in [0..(length-1)] do
-                        transposed[y, x] <- matrix[x, y]
-                transposed
                         
             let diagsUpperRight = inputMatrix |> getUpperRightDiagonals
             // Remove the first entry, because we already have that from the previous step (`List.rev |> List.tail`)
-            let diagsLoweLeft = inputMatrix |> transposeMatrix |> getUpperRightDiagonals |> List.rev |> List.tail
+            let diagsLowerLeft =
+                inputMatrix
+                |> transposeMatrix
+                |> getUpperRightDiagonals
+                |> List.rev
+                |> List.tail
             
-            let allDiagonals = diagsUpperRight @ diagsLoweLeft
+            let allDiagonals = diagsUpperRight @ diagsLowerLeft
             let result = allDiagonals |> List.map (fun x -> x |> csToString)
             result
             
         let diagonals = sampleInput |> getAllDiagonals
+        
+        let containsString (pattern: string) (s: string) =
+            let reverse s = s |> Seq.rev |> Seq.toArray |> String
+            let reversedPattern = pattern |> reverse
+            s.Contains(pattern) || s.Contains(reversedPattern)
+            
+        let containsXmas (s: string) = containsString "XMAS" s
+        
+        let countXmas (ss: string list) =
+            ss
+            |> List.map containsXmas
+            |> List.filter (fun x -> x = true)
+            |> List.length
+        
+        let dMatchCount = diagonals |> countXmas
+        
+        let rowMatchCount = sampleInput |> countXmas
+        let columnMatchCount = sampleInput |> array2D |> transposeMatrix |> matrix2Lists |> countXmas
         
         test <@ true = true @>
