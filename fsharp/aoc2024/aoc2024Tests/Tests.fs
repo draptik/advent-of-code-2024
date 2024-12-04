@@ -3,7 +3,9 @@
 open System
 open System.IO
 open System.Linq
+open System.Text
 open System.Text.RegularExpressions
+open Microsoft.FSharp.Core
 open Xunit
 open Swensen.Unquote
 
@@ -240,3 +242,106 @@ module Day3 =
         let result = Regex.Matches(enabled, regexMul) |> calcInstructions
 
         test <@ result = 83158140 @>
+
+module Day4 =
+    open System
+    open System.IO
+    open System.Linq
+    open System.Text
+    open System.Text.RegularExpressions
+    open Microsoft.FSharp.Core
+    
+    let csToString (cs: char list) =
+        let sb = StringBuilder(cs.Length)
+        cs |> List.iter (sb.Append >> ignore)
+        sb.ToString()
+
+    let reverseString  (s: string) = s |> Seq.rev |> Seq.toArray |> String
+    
+    // Idea:
+    // - rows and columns can be searched with regex.
+    // - Diagonals are treated differently.
+    //      -> I'll use Array2D and some matrix stuff.
+    [<Fact>]
+    let ``Part 1 - sample`` () =
+        let sampleInput =
+            [
+                "MMMSXXMASM"
+                "MSAMXMSMSA"
+                "AMXSXMAAMM"
+                "MSAMASMSMX"
+                "XMASAMXAMM"
+                "XXAMMXXAMA"
+                "SMSMSASXSS"
+                "SAXAMASAAA"
+                "MAMMMXMMMM"
+                "MXMXAXMASX"
+            ]
+        
+        let transposeMatrix (matrix: char array2d) =
+            let length = Array2D.length1 matrix
+            let transposed = Array2D.create length length '.'
+            for x in [0..(length-1)] do
+                for y in [0..(length-1)] do
+                    transposed[y, x] <- matrix[x, y]
+            transposed
+            
+        let matrix2Lists (matrix: char array2d) =
+            let mutable result = []
+            let length = (Array2D.length1 matrix) - 1
+            for r in [0..length] do
+                let s = matrix[r, *] |> String
+                result <- s :: result
+            result |> List.rev
+            
+        let getAllDiagonals (input: string list) =
+            
+            let inputMatrix = array2D input
+            
+            // Assumption: The matrix has the same height and width
+            let getMainDiagonal (a: char array2d) =
+                let length = Array2D.length1 a
+                let mutable diagonal = []
+                for i in 0..(length-1) do
+                   diagonal <- a[i, i] :: diagonal
+                diagonal |> List.rev
+            
+            let getUpperRightDiagonals (originalMatrix: char array2d) =
+                let length = (Array2D.length1 originalMatrix) - 1
+                let mutable allDiagonals = []
+                for i in [0..length] do
+                    let reversedIndex = length - i
+                    let diagonal = originalMatrix[0..reversedIndex, i..length] |> getMainDiagonal
+                    allDiagonals <- diagonal :: allDiagonals
+                allDiagonals
+                        
+            let diagsUpperRight = inputMatrix |> getUpperRightDiagonals
+            // Remove the first entry, because we already have that from the previous step (`List.rev |> List.tail`)
+            let diagsLowerLeft =
+                inputMatrix
+                |> transposeMatrix
+                |> getUpperRightDiagonals
+                |> List.rev
+                |> List.tail
+            
+            let allDiagonals = diagsUpperRight @ diagsLowerLeft
+            let result = allDiagonals |> List.map (fun x -> x |> csToString)
+            result
+            
+        let diagonals = sampleInput |> getAllDiagonals
+        
+        let countMatches (pattern: string) (s: string) =
+            let reversedPattern = pattern |> reverseString
+            let forwardMatchCount = Regex.Matches(s, pattern).Count
+            let backwardMatchCount = Regex.Matches(s, reversedPattern).Count
+            forwardMatchCount + backwardMatchCount
+            
+        let countXmas (ss: string list) = ss |> List.map (countMatches "XMAS") |> List.sum
+        
+        let diagonalMatchCount = diagonals |> countXmas
+        let rowMatchCount = sampleInput |> countXmas
+        let columnMatchCount = sampleInput |> array2D |> transposeMatrix |> matrix2Lists |> countXmas
+        
+        let result = diagonalMatchCount + rowMatchCount + columnMatchCount
+        
+        test <@ result = 18 @>
