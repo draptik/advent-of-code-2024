@@ -3,7 +3,9 @@
 open System
 open System.IO
 open System.Linq
+open System.Text
 open System.Text.RegularExpressions
+open Microsoft.FSharp.Core
 open Xunit
 open Swensen.Unquote
 
@@ -240,3 +242,67 @@ module Day3 =
         let result = Regex.Matches(enabled, regexMul) |> calcInstructions
 
         test <@ result = 83158140 @>
+
+module Day4 =
+    
+    let csToString (cs: char list) =
+        let sb = StringBuilder(cs.Length)
+        cs |> List.iter (sb.Append >> ignore)
+        sb.ToString()
+
+    [<Fact>]
+    let ``Part 1 - sample`` () =
+        let sampleInput =
+            [
+                "MMMSXXMASM"
+                "MSAMXMSMSA"
+                "AMXSXMAAMM"
+                "MSAMASMSMX"
+                "XMASAMXAMM"
+                "XXAMMXXAMA"
+                "SMSMSASXSS"
+                "SAXAMASAAA"
+                "MAMMMXMMMM"
+                "MXMXAXMASX"
+            ]
+        
+        let getAllDiagonals (input: string list) =
+            
+            let inputMatrix = array2D input
+            
+            // Assumption: The matrix has the same height and width
+            let getMainDiagonal (a: char array2d) =
+                let length = Array2D.length1 a
+                let mutable diagonal = []
+                for i in 0..(length-1) do
+                   diagonal <- a[i, i] :: diagonal
+                diagonal |> List.rev
+            
+            let getUpperRightDiagonals (originalMatrix: char array2d) =
+                let length = (Array2D.length1 originalMatrix) - 1
+                let mutable allDiagonals = []
+                for i in [0..length] do
+                    let reversedIndex = length - i
+                    let diagonal = originalMatrix[0..reversedIndex, i..length] |> getMainDiagonal
+                    allDiagonals <- diagonal :: allDiagonals
+                allDiagonals
+                
+            let transposeMatrix (matrix: char array2d) =
+                let length = Array2D.length1 matrix
+                let transposed = Array2D.create length length '.'
+                for x in [0..(length-1)] do
+                    for y in [0..(length-1)] do
+                        transposed[y, x] <- matrix[x, y]
+                transposed
+                        
+            let diagsUpperRight = inputMatrix |> getUpperRightDiagonals
+            // Remove the first entry, because we already have that from the previous step (`List.rev |> List.tail`)
+            let diagsLoweLeft = inputMatrix |> transposeMatrix |> getUpperRightDiagonals |> List.rev |> List.tail
+            
+            let allDiagonals = diagsUpperRight @ diagsLoweLeft
+            let result = allDiagonals |> List.map (fun x -> x |> csToString)
+            result
+            
+        let diagonals = sampleInput |> getAllDiagonals
+        
+        test <@ true = true @>
