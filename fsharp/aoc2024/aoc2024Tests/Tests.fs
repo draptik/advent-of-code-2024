@@ -350,3 +350,88 @@ module Day4 =
         let result = diagonalMatchCount + rowMatchCount + columnMatchCount
 
         test <@ result = 18 @>
+        
+    [<Fact>]
+    let ``Part 1`` () =
+        let sampleInput = readSample "day4_1.txt" |> List.ofSeq
+
+        let transposeMatrix (matrix: char array2d) =
+            let length = Array2D.length1 matrix
+            let transposed = Array2D.create length length '.'
+
+            for x in [ 0 .. (length - 1) ] do
+                for y in [ 0 .. (length - 1) ] do
+                    transposed[y, x] <- matrix[x, y]
+
+            transposed
+
+        let matrix2Lists (matrix: char array2d) =
+            let mutable result = []
+            let length = (Array2D.length1 matrix) - 1
+
+            for r in [ 0..length ] do
+                let s = matrix[r, *] |> String
+                result <- s :: result
+
+            result |> List.rev
+
+        let getDiagonals (input: string list) =
+
+            let inputMatrix = array2D input
+
+            // Assumption: The matrix has the same height and width
+            let getMainDiagonal (a: char array2d) =
+                let length = Array2D.length1 a
+                let mutable diagonal = []
+
+                for i in 0 .. (length - 1) do
+                    diagonal <- a[i, i] :: diagonal
+
+                diagonal |> List.rev
+
+            let getUpperRightDiagonals (originalMatrix: char array2d) =
+                let length = (Array2D.length1 originalMatrix) - 1
+                let mutable allDiagonals = []
+
+                for i in [ 0..length ] do
+                    let reversedIndex = length - i
+                    let diagonal = originalMatrix[0..reversedIndex, i..length] |> getMainDiagonal
+                    allDiagonals <- diagonal :: allDiagonals
+
+                allDiagonals
+
+            let diagsUpperRight = inputMatrix |> getUpperRightDiagonals
+            // Remove the first entry, because we already have that from the previous step (`List.rev |> List.tail`)
+            let diagsLowerLeft =
+                inputMatrix
+                |> transposeMatrix
+                |> getUpperRightDiagonals
+                |> List.rev
+                |> List.tail
+
+            let allDiagonals = diagsUpperRight @ diagsLowerLeft
+            let result = allDiagonals |> List.map (fun x -> x |> csToString)
+            result
+
+        let diagonalsLeftToRight = sampleInput |> getDiagonals
+        let diagonalsRightToLeft = sampleInput |> List.map reverseString |> getDiagonals
+        let diagonals = diagonalsLeftToRight @ diagonalsRightToLeft
+
+        let countMatches (pattern: string) (s: string) =
+            let reversedPattern = pattern |> reverseString
+            let forwardMatchCount = Regex.Matches(s, pattern).Count
+            let backwardMatchCount = Regex.Matches(s, reversedPattern).Count
+            forwardMatchCount + backwardMatchCount
+
+        let countXmas (ss: string list) =
+            ss |> List.map (countMatches "XMAS") |> List.sum
+
+        let diagonalMatchCount = diagonals |> countXmas
+        let rowMatchCount = sampleInput |> countXmas
+
+        let columnMatchCount =
+            sampleInput |> array2D |> transposeMatrix |> matrix2Lists |> countXmas
+
+        let result = diagonalMatchCount + rowMatchCount + columnMatchCount
+
+        test <@ result = 18 @> // 2434 too low
